@@ -209,7 +209,18 @@ load();render();
 // ===== MATCH CONTROL + FULL SEASON FIXTURE PATCH =====
 (function(){
  const originalRender=render, originalStartSeason=startSeason, originalSkip=window.skipRound;
- const SHOTS=[
+const REAL={"Adelaide Strikers": ["Lachie Bangs", "Alex Carey", "Mark Chapman", "Mackenzie Harvey", "Thomas Kelly", "Nathan McAndrew", "Lloyd Pope", "Haris Rauf", "Jason Sangha", "Liam Scott", "Harjas Singh", "Matt Short", "Ben Stokes", "Tom Straker", "Henry Thornton", "Jerrssis Wadia"], "Brisbane Heat": ["Tom Balkin", "Xavier Bartlett", "Max Bryant", "Tom Curran", "Lachlan Hearne", "Bevon Jacobs", "Spencer Johnson", "Usman Khawaja", "Marnus Labuschagne", "Matt Kuhnemann", "Nathan McSweeney", "Michael Neser", "Oli Patterson", "Jimmy Peirson", "Matthew Renshaw", "Tim Robinson", "Callum Vidler", "Hugh Weibgen", "Jack Wildermuth"], "Hobart Hurricanes": ["Marcus Bean", "Iain Carlisle", "Nikhil Chaudhary", "Tim David", "Nathan Ellis", "Nick Hobson", "Shai Hope", "Ben McDermott", "Riley Meredith", "Mitch Owen", "Will Prestwidge", "Billy Stanlake", "Tim Ward", "Jake Weatherald", "Beau Webster", "Adam Zampa"], "Melbourne Renegades": ["Michael Archer", "Jonny Bairstow", "Jason Behrendorff", "Michael Bracewell", "Josh Brown", "Harry Dixon", "Brendan Doggett", "Sam Elliott", "Jake Fraser-McGurk", "Matt Hennig", "Caleb Jewell", "Ben Manenti", "Ollie Peake", "Mustafizur Rahman", "Tom Rogers", "Callum Stow", "Will Sutherland"], "Melbourne Stars": ["Finn Allen", "Austin Anlezark", "Hilton Cartwright", "Sam Harper", "Liam Hatcher", "Campbell Kellaway", "Blake Macdonald", "Glenn Maxwell", "Tom Rogers", "Peter Siddle", "Mark Steketee", "Marcus Stoinis", "Mitch Swepson", "Tom Whitney"], "Perth Scorchers": ["Ashton Agar", "Mahli Beardman", "Cooper Connolly", "Brody Couch", "Zak Crawley", "Joel Curtis", "Aneurin Donald", "Albert Esterhuysen", "Aaron Hardie", "Calvin Harrison", "Mitch Marsh", "Will Malajczuk", "Lance Morris", "Joel Paris", "Jhye Richardson", "Ashton Turner"], "Sydney Sixers": ["Sean Abbott", "Jafer Chohan", "Joel Davies", "Ollie Davies", "Ben Dwarshuis", "Jack Edwards", "Chris Jordan", "Hayden Kerr", "Riley Kingsell", "Fergus O'Neill", "Josh Philippe", "Corey Rocchiccioli", "Jake Scott", "Tim Seifert", "Lachlan Shaw", "Jordan Silk", "Steve Smith"], "Sydney Thunder": ["Wes Agar", "Cameron Bancroft", "Trent Boult", "Sam Billings", "Hugo Burdon", "Lockie Ferguson", "Matt Gilkes", "Chris Green", "Ryan Hadley", "Harry Hoekstra", "Sam Konstas", "Nic Maddinson", "Aidan O'Connor", "Will Salzmann", "Daniel Sams", "Tanveer Sangha", "David Warner"], "South Australia Redbacks": ["Wes Agar", "Jordan Buckingham", "Alex Carey", "Brendan Doggett", "Jake Fraser-McGurk", "Matthew Gilkes", "Travis Head", "Henry Hunt", "Hanno Jacobs", "Spencer Johnson", "Jake Lehmann", "Ben Manenti", "Nathan McAndrew", "Noah McFadyen", "Nathan McSweeney", "Harry Nielsen", "Lloyd Pope", "Henry Thornton", "Campbell Thompson", "Jason Sangha", "Liam Scott", "Mackenzie Harvey", "Jerrssis Wadia", "Jake Weatherald"]};
+ const FN=['Jack','Tom','Sam','Will','Ben','Josh','Luke','Cam','Max','Ryan','Nick','Dan','Liam','Ollie','Matt','Harry','Ethan','Jake','Cooper','Lachie'],LN=['Brooks','Hayes','Walker','Doyle','Carr','Hunt','Pike','Moss','Ford','Lane','Rowe','Dunn','Vale','Burke','Nash','Reid','Shaw','Cole','Webb','Hale'];
+ function squadFor(t){if(REAL[t])return{names:REAL[t].slice(),real:true};let h=0;for(const c of t)h=(h*31+c.charCodeAt(0))>>>0;const n=[];for(let i=0;i<16;i++){h=(h*1103515245+12345)>>>0;const x=FN[h%20]+' '+LN[(h>>>9)%20]+'*';if(!n.includes(x))n.push(x)}return{names:n,real:false}}
+ function myShort(){const p=S.name.trim().split(' ');return p[0][0]+' '+p[p.length-1]}
+ function defPos(){return S.battingPos!=null?S.battingPos:({'Aggressive opener':0,'Classical Test batter':2,'Anchor':2,'Power hitter':4,'Finisher':5}[S.arch]??(S.role==='bowler'?9:S.role==='allrounder'?6:3))}
+ function autoBat(m){const t20=m.format==='T20',odi=m.format==='ODI',rate=t20?1.7:odi?1.05:.5,rg=t20?[5,26]:odi?[12,48]:[25,95];let b=Math.max(2,Math.round(R(rg[0],rg[1])));b=Math.min(b,m.maxBalls-m.balls);if(b<=0)return;
+  const late=m.format!=='Four-day'&&m.balls>m.maxBalls*.75?1.3:1,r=Math.round(b*rate*R(.5,1.3)*late),nm=m.queue[m.qi++]||'Tail-ender',bw=pick(m.bowlers),fl=pick(m.fielders);
+  m.balls+=b;m.runs+=r;m.wickets++;m.log.push(nm+' '+pick(['c '+fl+' b '+bw,'b '+bw,'lbw b '+bw])+' '+r+' ('+b+')  → '+m.runs+'/'+m.wickets);}
+ function advance(m){const need=Math.max(0,m.pos-1);while(m.wickets<need&&m.wickets<10&&m.balls<m.maxBalls)autoBat(m);
+  if(m.wickets>=10||m.balls>=m.maxBalls){finishBallByBall();return false}
+  m.me.in=true;m.partner=pick(m.queue.slice(m.qi,m.qi+2).concat(['Partner']));m.log.push(m.me.name+' walks in at '+m.runs+'/'+m.wickets);return true}
+  const SHOTS=[
   ['Leave','leave','Low risk · no run'],['Defend','defend','Very safe · protect wicket'],['Block','block','Safe · look for singles'],
   ['Forward drive','drive','Balanced · timing matters'],['Back-foot cut','cut','Balanced · score square'],['Pull shot','pull','Risky · attack short balls'],
   ['Sweep','sweep','Risky · target spin'],['Lofted drive','loft','Very risky · boundary option'],['Late dab','dab','Low risk · rotate strike']
@@ -245,31 +256,39 @@ load();render();
   if(S.seasonSchedule){const f=S.liveMatch?S.liveMatch:scheduleCurrent();
    const fmt=f?.format||'Two-day';const stage=f?.stage||'Season fixture';
    if(!S.liveMatch){
-    card.innerHTML=`<div class="lbl">${stage}</div><h3>${fmt} match</h3><div class="tm"><div><div class="bd">${ini(teamName())}</div><b>${teamName()}</b></div><div><div class="big" style="font-size:22px">VS</div><div class="sub">${fmt}</div></div><div><div class="bd">${ini(S.nextOpp||'?')}</div><b>${S.nextOpp||'Opponent'}</b></div></div><p class="sub">Fixture ${S.round}/${S.rounds}. ${fmt==='Two-day'?'Two-day match':'ODI 50 overs / T20 20 overs'}.</p>${S.sel&&!S.inj?`<button class="btn" style="width:100%" onclick="startBallByBall()">Start match</button>`:`<button class="btn" style="width:100%" onclick="skipRound()">${S.inj?'Injured — skip fixture':'Not selected — skip fixture'}</button>`}`;
+    card.innerHTML=`<div class="lbl">${stage}</div><h3>${fmt} match</h3><div class="tm"><div><div class="bd">${ini(teamName())}</div><b>${teamName()}</b></div><div><div class="big" style="font-size:22px">VS</div><div class="sub">${fmt}</div></div><div><div class="bd">${ini(S.nextOpp||'?')}</div><b>${S.nextOpp||'Opponent'}</b></div></div><p class="sub">Fixture ${S.round}/${S.rounds}. ${fmt==='Two-day'?'Two-day match':'ODI 50 overs / T20 20 overs'}.</p>${S.sel&&!S.inj?`<div class="lbl">Your batting position</div><select onchange="S.battingPos=+this.value;save()">${[...Array(11).keys()].map(i=>`<option value=${i} ${defPos()==i?'selected':''}>${i+1}${i<2?' (opener)':''}</option>`).join('')}</select><button class="btn" style="width:100%" onclick="startBallByBall()">Start match</button>`:`<button class="btn" style="width:100%" onclick="skipRound()">${S.inj?'Injured — skip fixture':'Not selected — skip fixture'}</button>`}`;
    }else{
-    const m=S.liveMatch,over=Math.floor(m.balls/6),ball=m.balls%6+1;
-    card.innerHTML=`<div class="lbl">${m.stage} · ${m.format}</div><h3>${teamName()} batting</h3><div class="g3"><div><div class="big">${m.runs}</div><div class="lbl">Runs</div></div><div><div class="big">${m.wickets}/10</div><div class="lbl">Wickets</div></div><div><div class="big">${over}.${ball-1}</div><div class="lbl">Overs</div></div></div><p class="sub">${m.opponent} · Choose what you play for the next ball. Every ball is your decision.</p><div class="g2">${SHOTS.map(x=>`<button class="opt" onclick="chooseShot('${x[1]}')"><b>${x[0]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="card" style="margin:12px 0 0;padding:12px"><b>Last ball</b><div class="sub">${m.last||'Ready to face the first ball.'}</div><div class="sub" style="margin-top:8px">${m.log.slice(-6).join(' · ')}</div></div>`;
+    const m=S.liveMatch,bw=m.bowlers[Math.floor(m.balls/6)%m.bowlers.length];
+    card.innerHTML=`<div class="lbl">${m.stage} · ${m.format}${m.knockout?' · KNOCKOUT':''}</div><h3>${teamName()} ${m.runs}/${m.wickets}</h3><div class="g3"><div><div class="big">${m.me.runs}</div><div class="lbl">${m.me.name}</div></div><div><div class="big">${m.me.balls}</div><div class="lbl">Balls faced</div></div><div><div class="big">${Math.floor(m.balls/6)}.${m.balls%6}</div><div class="lbl">Overs</div></div></div><p class="sub">${m.opponent} · <b>${bw}</b> to bowl · Partner: ${m.partner}. You choose the shot for every ball you face.</p><div class="g2">${SHOTS.map(x=>`<button class="opt" onclick="chooseShot('${x[1]}')"><b>${x[0]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="card" style="margin:12px 0 0;padding:12px"><b>Last ball</b><div class="sub">${m.last||'Ready to face the first ball.'}</div><div class="sub" style="margin-top:8px">${m.log.slice(-6).join(' · ')}</div></div><small class="sub">Names with * are fictional (real squad not loaded). Teammates and opponents are simulated.</small>`;
    }
   }
  };
- window.startBallByBall=function(){if(!S||!S.sel||S.inj)return;const f=scheduleCurrent()||{opponent:S.nextOpp,format:'ODI',stage:'Match'};S.liveMatch={opponent:f.opponent,format:f.format,stage:f.stage,runs:0,wickets:0,balls:0,log:[],last:'',knockout:!!f.knockout,maxBalls:f.format==='T20'?120:f.format==='ODI'?300:540};save();render();};
- window.chooseShot=function(shot){
-  const m=S?.liveMatch;if(!m)return;
-  const strength=(LV[S.lv]&&LV[S.lv].s)||50,edge=(eff(S)-strength)/100,skill=(S.tech+S.tim+S.conc)/300;
-  const t20=m.format==='T20',odi=m.format==='ODI',wm=t20?1.1:odi?1:.85;
+window.startBallByBall=function(){if(!S||!S.sel||S.inj)return;const f=scheduleCurrent()||{opponent:S.nextOpp,format:'ODI',stage:'Match'};
+  const me=myShort(),opp=squadFor(f.opponent),mine=squadFor(teamName()),pos=defPos();
+  const mates=mine.names.filter(n=>n.replace('*','')!==me).sort(()=>Math.random()-.5).slice(0,10),order=mates.slice();order.splice(pos,0,me);
+  S.liveMatch={opponent:f.opponent,format:f.format,stage:f.stage,knockout:!!f.knockout,runs:0,wickets:0,balls:0,log:[],last:'',maxBalls:f.format==='T20'?120:f.format==='ODI'?300:540,
+   me:{name:me,runs:0,balls:0,out:false,in:false},pos,queue:order.filter(n=>n!==me),qi:0,partner:'',bowlers:opp.names.slice(0,7).sort(()=>Math.random()-.5).slice(0,6),fielders:opp.names.slice(),oppReal:opp.real,mineReal:mine.real};
+  if(advance(S.liveMatch)){save();render();}
+ };
+window.chooseShot=function(shot){
+  const m=S?.liveMatch;if(!m||!m.me.in)return;
+  const strength=(LV[S.lv]&&LV[S.lv].s)||50,edge=(eff(S)-strength)/100,skill=(S.tech+S.tim+S.conc)/300,wm=m.format==='T20'?1.1:m.format==='ODI'?1:.85;
   const risk={leave:.004,defend:.008,block:.013,drive:.028,cut:.032,pull:.05,sweep:.045,loft:.075,dab:.016}[shot]||.03;
-  const wicketChance=clamp(risk*wm*(1.2-edge)*(1.3-skill*.45)*(1+m.balls/1800),.003,.22);
+  const wc=clamp(risk*wm*(1.2-edge)*(1.3-skill*.45)*(1+m.me.balls/900),.003,.22);
   const T={leave:[0],defend:[0,0,0,0,0,1],block:[0,0,0,1,1,1,2],drive:[0,0,1,1,1,2,4,4],cut:[0,0,1,1,2,4],pull:[0,0,1,1,2,4,6],sweep:[0,0,1,1,2,4],loft:[0,0,1,1,4,6,6],dab:[0,0,1,1,1,2]}[shot]||[0,1];
-  m.balls++;let msg='';
-  if(Math.random()<wicketChance){m.wickets++;msg='WICKET — '+pick(['caught','bowled','LBW','caught behind']);}
-  else{let r=pick(T);if(Math.random()<edge*.4&&r<4)r++;m.runs+=r;msg=r===0?'Dot ball':r===4?'FOUR!':r===6?'SIX!':r+' run'+(r===1?'':'s');}
-  m.last=msg;m.log.push(`${Math.floor((m.balls-1)/6)}.${(m.balls-1)%6+1} ${msg}`);
-  if(m.wickets>=10||m.balls>=m.maxBalls)finishBallByBall();else{save();render();}
+  const bw=m.bowlers[Math.floor(m.balls/6)%m.bowlers.length],ov=Math.floor(m.balls/6)+'.'+(m.balls%6+1);
+  m.balls++;m.me.balls++;let msg;
+  if(Math.random()<wc){m.wickets++;m.me.out=true;msg='OUT! '+pick(['c '+pick(m.fielders)+' b '+bw,'b '+bw,'lbw b '+bw]);}
+  else{let r=pick(T);if(Math.random()<edge*.4&&r<4)r++;m.runs+=r;m.me.runs+=r;msg=r===0?'no run':r===4?'FOUR!':r===6?'SIX!':r+' run'+(r===1?'':'s');}
+  m.last=bw+' to '+m.me.name+': '+msg;m.log.push(ov+' '+m.last);
+  if(m.me.out){while(m.wickets<10&&m.balls<m.maxBalls)autoBat(m);finishBallByBall();return}
+  if(m.balls>=m.maxBalls||m.wickets>=10){finishBallByBall();return}
+  save();render();
  };
  function finishBallByBall(){
-  const m=S.liveMatch;if(!m)return;const st=S.stats['s'+S.lv];st.m++;st.inn++;st.runs+=m.runs;st.balls+=m.balls;st.hs=Math.max(st.hs,m.runs);if(m.runs>=100)st.h++;else if(m.runs>=50)st.f++;
+  const m=S.liveMatch;if(!m)return;const st=S.stats['s'+S.lv];st.m++;if(m.me.in){st.inn++;st.runs+=m.me.runs;st.balls+=m.me.balls;if(!m.me.out)st.no++;st.hs=Math.max(st.hs,m.me.runs);if(m.me.runs>=100)st.h++;else if(m.me.runs>=50)st.f++;}
   const rg=m.format==='T20'?[125,195]:m.format==='ODI'?[210,310]:[200,380],oppScore=Math.round(R(rg[0],rg[1])*(0.8+((LV[S.lv]&&LV[S.lv].s)||50)/250));const win=m.runs>=oppScore;const up=teamName();S.ladder[up]=(S.ladder[up]||0)+(win?2:0);Object.keys(S.ladder).forEach(t=>{if(t!==up)S.ladder[t]+=(Math.random()<.5?2:0)});
-  const line=`${up} ${m.runs}/${m.wickets} v ${m.opponent} ${oppScore} — ${win?'WIN':'LOSS'}`;S.log=[...m.log,`<b>${line}</b>`];S.form=clamp(S.form*.8+((m.runs/Math.max(1,m.maxBalls/6)*2+30)*.2));S.conf=clamp(S.conf+(win?3:-2)+(m.runs>30?4:-2));S.money+=m.format==='T20'?40:m.format==='ODI'?60:80;S.followers+=Math.round(m.runs/10+(win?5:0));S.rep=clamp(S.rep+m.runs/100-.2);S.energy=clamp(S.energy-12+25);S.hap=clamp(S.hap-1);S.wk++;
+  const line=`${up} ${m.runs}/${m.wickets} v ${m.opponent} ${oppScore} — ${win?'WIN':'LOSS'}`;S.log=[...m.log,`<b>${m.me.in?m.me.name+': '+m.me.runs+(m.me.out?'':'*')+' ('+m.me.balls+')':'Did not bat'}</b>`,`<b>${line}</b>`];S.form=clamp(S.form*.8+((m.me.runs/Math.max(1,m.maxBalls/6)*2+30)*.2));S.conf=clamp(S.conf+(win?3:-2)+(m.me.runs>30?4:-2));S.money+=m.format==='T20'?40:m.format==='ODI'?60:80;S.followers+=Math.round(m.me.runs/10+(win?5:0));S.rep=clamp(S.rep+m.me.runs/100-.2);S.energy=clamp(S.energy-12+25);S.hap=clamp(S.hap-1);S.wk++;
   const wasCup=!!m.knockout;if(wasCup&&!win){S.t20Eliminated=true;S.news.unshift('Knocked out in the '+m.stage+'. Your run is over.');S.seasonSchedule=S.seasonSchedule.slice(0,(S.scheduleIndex||0)+1);}
   if(m.knockout&&win&&/Final$/.test(m.stage)){(S.trophies=S.trophies||[]).unshift({title:m.stage.split(' · ')[0],date:'Season '+S.season,detail:line});S.news.unshift('🏆 CHAMPIONS! '+m.stage.split(' · ')[0]);}S.news.unshift(line);S.timeline.unshift({date:'Season '+S.season+' · '+m.stage,title:m.format+' result',body:line});S.liveMatch=null;S.scheduleIndex=(S.scheduleIndex||0)+1;
   if(S.scheduleIndex>=S.seasonSchedule.length){endSeason();}else{updateFixture();selection();}
