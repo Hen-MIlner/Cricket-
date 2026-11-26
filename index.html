@@ -219,7 +219,11 @@ const REAL={"Adelaide Strikers": ["Lachie Bangs", "Alex Carey", "Mark Chapman", 
   m.balls+=b;m.runs+=r;m.wickets++;m.log.push(nm+' '+pick(['c '+fl+' b '+bw,'b '+bw,'lbw b '+bw])+' '+r+' ('+b+')  → '+m.runs+'/'+m.wickets);}
  function advance(m){const need=Math.max(0,m.pos-1);while(m.wickets<need&&m.wickets<10&&m.balls<m.maxBalls)autoBat(m);
   if(m.wickets>=10||m.balls>=m.maxBalls){finishBallByBall();return false}
-  m.me.in=true;m.partner=pick(m.queue.slice(m.qi,m.qi+2).concat(['Partner']));m.log.push(m.me.name+' walks in at '+m.runs+'/'+m.wickets);return true}
+  m.me.in=true;m.pn=m.queue.splice(m.qi,1)[0]||'Partner';m.pb=need?Math.round(R(4,22)):0;m.pr=need?Math.round(m.pb*R(.3,1)):0;m.strike='me';m.log.push(m.me.name+' walks in at '+m.runs+'/'+m.wickets);return true}
+ function partnerBall(m){const t20=m.format==='T20',odi=m.format==='ODI',bw=m.bowlers[Math.floor(m.balls/6)%m.bowlers.length],ov=Math.floor(m.balls/6)+'.'+(m.balls%6+1);m.balls++;m.pb++;
+  if(Math.random()<(t20?.05:odi?.032:.022)){m.wickets++;m.log.push(ov+' '+bw+' to '+m.pn+': OUT! '+pick(['c '+pick(m.fielders)+' b '+bw,'b '+bw,'lbw b '+bw])+' '+m.pr+' ('+m.pb+')  → '+m.runs+'/'+m.wickets);if(m.wickets<10){m.pn=m.queue[m.qi++]||'Tail-ender';m.pr=0;m.pb=0;}}
+  else{const r=pick(t20?[0,0,1,1,1,2,4,6]:odi?[0,0,0,1,1,1,2,4]:[0,0,0,0,1,1,2,4]);m.runs+=r;m.pr+=r;m.log.push(ov+' '+bw+' to '+m.pn+': '+(r===0?'no run':r===4?'FOUR!':r===6?'SIX!':r+' run'+(r>1?'s':'')));if(r%2)m.strike=m.strike==='me'?'pn':'me';}
+  if(m.balls%6===0)m.strike=m.strike==='me'?'pn':'me';}
   const SHOTS=[
   ['Leave','leave','Low risk · no run'],['Defend','defend','Very safe · protect wicket'],['Block','block','Safe · look for singles'],
   ['Forward drive','drive','Balanced · timing matters'],['Back-foot cut','cut','Balanced · score square'],['Pull shot','pull','Risky · attack short balls'],
@@ -259,7 +263,7 @@ const REAL={"Adelaide Strikers": ["Lachie Bangs", "Alex Carey", "Mark Chapman", 
     card.innerHTML=`<div class="lbl">${stage}</div><h3>${fmt} match</h3><div class="tm"><div><div class="bd">${ini(teamName())}</div><b>${teamName()}</b></div><div><div class="big" style="font-size:22px">VS</div><div class="sub">${fmt}</div></div><div><div class="bd">${ini(S.nextOpp||'?')}</div><b>${S.nextOpp||'Opponent'}</b></div></div><p class="sub">Fixture ${S.round}/${S.rounds}. ${fmt==='Two-day'?'Two-day match':'ODI 50 overs / T20 20 overs'}.</p>${S.sel&&!S.inj?`<div class="lbl">Your batting position</div><select onchange="S.battingPos=+this.value;save()">${[...Array(11).keys()].map(i=>`<option value=${i} ${defPos()==i?'selected':''}>${i+1}${i<2?' (opener)':''}</option>`).join('')}</select><button class="btn" style="width:100%" onclick="startBallByBall()">Start match</button>`:`<button class="btn" style="width:100%" onclick="skipRound()">${S.inj?'Injured — skip fixture':'Not selected — skip fixture'}</button>`}`;
    }else{
     const m=S.liveMatch,bw=m.bowlers[Math.floor(m.balls/6)%m.bowlers.length];
-    card.innerHTML=`<div class="lbl">${m.stage} · ${m.format}${m.knockout?' · KNOCKOUT':''}</div><h3>${teamName()} ${m.runs}/${m.wickets}</h3><div class="g3"><div><div class="big">${m.me.runs}</div><div class="lbl">${m.me.name}</div></div><div><div class="big">${m.me.balls}</div><div class="lbl">Balls faced</div></div><div><div class="big">${Math.floor(m.balls/6)}.${m.balls%6}</div><div class="lbl">Overs</div></div></div><p class="sub">${m.opponent} · <b>${bw}</b> to bowl · Partner: ${m.partner}. You choose the shot for every ball you face.</p><div class="g2">${SHOTS.map(x=>`<button class="opt" onclick="chooseShot('${x[1]}')"><b>${x[0]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="card" style="margin:12px 0 0;padding:12px"><b>Last ball</b><div class="sub">${m.last||'Ready to face the first ball.'}</div><div class="sub" style="margin-top:8px">${m.log.slice(-6).join(' · ')}</div></div><small class="sub">Names with * are fictional (real squad not loaded). Teammates and opponents are simulated.</small>`;
+    card.innerHTML=`<div class="lbl">${m.stage} · ${m.format}${m.knockout?' · KNOCKOUT':''}</div><h3>${teamName()} ${m.runs}/${m.wickets}</h3><div class="g3"><div><div class="big">${m.me.runs}</div><div class="lbl">${m.me.name}</div></div><div><div class="big">${m.me.balls}</div><div class="lbl">Balls faced</div></div><div><div class="big">${Math.floor(m.balls/6)}.${m.balls%6}</div><div class="lbl">Overs</div></div></div><p class="sub">${m.opponent} · <b>${bw}</b> to bowl · Partner: ${m.pn} ${m.pr} (${m.pb}). You choose the shot for every ball you face.</p><div class="g2">${SHOTS.map(x=>`<button class="opt" onclick="chooseShot('${x[1]}')"><b>${x[0]}</b><small>${x[2]}</small></button>`).join('')}</div><div class="card" style="margin:12px 0 0;padding:12px"><b>Last ball</b><div class="sub">${m.last||'Ready to face the first ball.'}</div><div class="sub" style="margin-top:8px">${m.log.slice(-6).join(' · ')}</div></div><small class="sub">Names with * are fictional (real squad not loaded). Teammates and opponents are simulated.</small>`;
    }
   }
  };
@@ -277,12 +281,15 @@ window.chooseShot=function(shot){
   const wc=clamp(risk*wm*(1.2-edge)*(1.3-skill*.45)*(1+m.me.balls/900),.003,.22);
   const T={leave:[0],defend:[0,0,0,0,0,1],block:[0,0,0,1,1,1,2],drive:[0,0,1,1,1,2,4,4],cut:[0,0,1,1,2,4],pull:[0,0,1,1,2,4,6],sweep:[0,0,1,1,2,4],loft:[0,0,1,1,4,6,6],dab:[0,0,1,1,1,2]}[shot]||[0,1];
   const bw=m.bowlers[Math.floor(m.balls/6)%m.bowlers.length],ov=Math.floor(m.balls/6)+'.'+(m.balls%6+1);
-  m.balls++;m.me.balls++;let msg;
+  m.balls++;m.me.balls++;let msg,rr=0;
   if(Math.random()<wc){m.wickets++;m.me.out=true;msg='OUT! '+pick(['c '+pick(m.fielders)+' b '+bw,'b '+bw,'lbw b '+bw]);}
-  else{let r=pick(T);if(Math.random()<edge*.4&&r<4)r++;m.runs+=r;m.me.runs+=r;msg=r===0?'no run':r===4?'FOUR!':r===6?'SIX!':r+' run'+(r===1?'':'s');}
+  else{let r=pick(T);if(Math.random()<edge*.4&&r<4)r++;rr=r;m.runs+=r;m.me.runs+=r;msg=r===0?'no run':r===4?'FOUR!':r===6?'SIX!':r+' run'+(r===1?'':'s');}
   m.last=bw+' to '+m.me.name+': '+msg;m.log.push(ov+' '+m.last);
-  if(m.me.out){while(m.wickets<10&&m.balls<m.maxBalls)autoBat(m);finishBallByBall();return}
+  if(m.me.out){m.queue.splice(m.qi,0,m.pn);while(m.wickets<10&&m.balls<m.maxBalls)autoBat(m);finishBallByBall();return}
   if(m.balls>=m.maxBalls||m.wickets>=10){finishBallByBall();return}
+  if(rr%2===1)m.strike=m.strike==='me'?'pn':'me';if(m.balls%6===0)m.strike=m.strike==='me'?'pn':'me';
+  while(m.strike==='pn'&&m.wickets<10&&m.balls<m.maxBalls)partnerBall(m);
+  if(m.wickets>=10||m.balls>=m.maxBalls){finishBallByBall();return}
   save();render();
  };
  function finishBallByBall(){
